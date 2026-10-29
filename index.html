@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ckb" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>کەناڵی وەرزشی</title>
+<style>
+:root{--bg:#f4f6f8;--card:#fff;--tx:#14202b;--mu:#667585;--ac:#0a8f4e;--rd:#d93636;--bd:#dde3e8;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#10171d;--card:#1a232b;--tx:#eef2f5;--mu:#93a1ad;--bd:#2b3640}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;line-height:1.6}
+header{background:var(--ac);color:#fff;padding:18px 16px 14px;text-align:center}
+header h1{margin:0;font-size:24px}
+.news{margin-top:10px;background:rgba(0,0,0,.22);border-radius:10px;padding:8px 12px;font-size:15px}
+main{max-width:680px;margin:0 auto;padding:14px}
+h2{font-size:18px;margin:20px 0 10px;border-right:4px solid var(--ac);padding-right:8px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px;margin-bottom:10px}
+.card b{display:block}.mu{color:var(--mu);font-size:13px}
+a.btn,button{background:var(--ac);color:#fff;border:0;border-radius:8px;padding:8px 14px;font-size:14px;text-decoration:none;display:inline-block;cursor:pointer;font-family:inherit}
+button.del{background:var(--rd);padding:5px 10px;font-size:12px;margin-top:8px}
+a.live{background:var(--rd)}
+video{width:100%;border-radius:8px;margin-top:8px;background:#000}
+input{width:100%;padding:9px;margin:4px 0;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font-family:inherit;font-size:15px}
+.admin{border:2px dashed var(--ac)}
+.admin h3{margin:0 0 6px;font-size:15px}
+.empty{color:var(--mu);text-align:center;padding:10px}
+#msg{font-size:13px;color:var(--rd)}
+.off .card{display:none}
+</style>
+</head>
+<body>
+<header>
+  <h1 id="ch">کەناڵی وەرزشی</h1>
+  <div class="news" id="hl">📰 هەواڵی وەرزشی لێرە دادەنرێت</div>
+</header>
+<main>
+  <h2>🔴 یارییە ڕاستەوخۆکان</h2>
+  <div id="live"><div class="empty">هیچ لینکێک نییە</div></div>
+
+  <h2>⚽ گۆڵ و کورتکراوەی یارییەکان</h2>
+  <div id="goals"><div class="empty">هێشتا هیچ گۆڵێک نییە</div></div>
+
+  <div id="adminBox" hidden>
+    <h2 onclick="document.getElementById('adminBox').classList.toggle('off')" style="cursor:pointer">⚙️ بەڕێوەبردن (دەستکاری)</h2>
+    <div class="card admin">
+      <h3>ناوی کەناڵ و هەواڵ</h3>
+      <input id="iCh" placeholder="ناوی کەناڵ">
+      <input id="iHl" placeholder="سەردێڕی هەواڵی وەرزشی">
+      <button onclick="saveSite()">پاشەکەوتکردن</button>
+    </div>
+    <div class="card admin">
+      <h3>لینکی یاری ڕاستەوخۆ</h3>
+      <input id="lT" placeholder="ناوی یاری (بۆ نموونە: ڕیال – بارسا)">
+      <input id="lU" placeholder="لینکی ڕاستەوخۆ https://..." dir="ltr">
+      <button onclick="addLive()">زیادکردن</button>
+    </div>
+    <div class="card admin">
+      <h3>گۆڵ / کورتکراوە</h3>
+      <input id="gM" placeholder="یاری (بۆ نموونە: ڕیال 2 – 1 بارسا)">
+      <input id="gP" placeholder="گۆڵەکە (یاریزان و خولەک)">
+      <input id="gU" placeholder="لینکی ڤیدیۆ https://... (دەتوانیت بەتاڵی بهێڵیت)" dir="ltr">
+      <button onclick="addGoal()">پۆستکردن</button>
+    </div>
+    <div class="card admin">
+      <h3>بڵاوکردنەوە بۆ بینەران</h3>
+      <div class="mu">دوای هەر گۆڕانکارییەک: «کۆپیکردنی JSON» بدە، ناوەڕۆکی data.json لە GitHub بسڕەوە و ئەمە لەجێی دابنێ.</div>
+      <button onclick="copyJson()">📋 کۆپیکردنی JSON</button>
+      <textarea id="out" readonly hidden style="width:100%;height:120px;margin-top:8px;direction:ltr"></textarea>
+    </div>
+    <div id="msg"></div>
+  </div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const safe=u=>/^https?:\/\//i.test(u||"")?u:"";
+const say=t=>$("msg").textContent=t||"";
+const ADMIN=new URLSearchParams(location.search).has("admin");
+let D={channel:"",headline:"",live:[],goals:[]};
+function render(){
+  if(D.channel)$("ch").textContent=D.channel;
+  if(D.headline)$("hl").textContent="📰 "+D.headline;
+  const A=ADMIN;
+  $("live").innerHTML=D.live.length?D.live.map((d,i)=>`<div class="card"><b>${esc(d.title)}</b><a class="btn live" href="${esc(safe(d.url))}" target="_blank" rel="noopener" style="margin-top:6px">▶ بینینی ڕاستەوخۆ</a>${A?`<br><button class="del" onclick="del('live',${i})">سڕینەوە</button>`:""}</div>`).join(""):'<div class="empty">هیچ لینکێک نییە</div>';
+  $("goals").innerHTML=D.goals.length?D.goals.map((d,i)=>`<div class="card"><b>${esc(d.match)}</b><span class="mu">${esc(d.player)}</span>${safe(d.url)?`<a class="btn" href="${esc(safe(d.url))}" target="_blank" rel="noopener" style="margin-top:8px">▶ بینینی ڤیدیۆ</a>`:""}${A?`<br><button class="del" onclick="del('goals',${i})">سڕینەوە</button>`:""}</div>`).join(""):'<div class="empty">هێشتا هیچ گۆڵێک نییە</div>';
+}
+function draft(){try{localStorage.setItem("sportDraft",JSON.stringify(D))}catch(e){}render()}
+function del(c,i){if(confirm("دڵنیایت؟")){D[c].splice(i,1);draft()}}
+function saveSite(){D.channel=$("iCh").value.trim();D.headline=$("iHl").value.trim();draft();say("گۆڕدرا ✓ (ئێستا JSON کۆپی بکە)")}
+function addLive(){
+  const t=$("lT").value.trim(),u=$("lU").value.trim();
+  if(!t||!safe(u))return say("ناو و لینکێکی دروست بنووسە");
+  D.live.unshift({title:t,url:u});$("lT").value=$("lU").value="";draft();say("زیاد کرا ✓ (ئێستا JSON کۆپی بکە)")
+}
+function addGoal(){
+  const m=$("gM").value.trim(),p=$("gP").value.trim(),u=$("gU").value.trim();
+  if(!m)return say("ناوی یاری بنووسە");
+  D.goals.unshift({match:m,player:p,url:u});$("gM").value=$("gP").value=$("gU").value="";draft();say("زیاد کرا ✓ (ئێستا JSON کۆپی بکە)")
+}
+async function copyJson(){
+  const t=JSON.stringify(D,null,2);$("out").hidden=false;$("out").value=t;
+  try{await navigator.clipboard.writeText(t);say("کۆپی کرا ✓")}catch(e){$("out").select();say("دەقەکە هەڵبژێرە و کۆپی بکە")}
+}
+(async()=>{
+  try{const r=await fetch("data.json?t="+Date.now(),{cache:"no-store"});if(r.ok)D=Object.assign(D,await r.json())}catch(e){}
+  if(ADMIN){
+    $("adminBox").hidden=false;
+    try{const l=localStorage.getItem("sportDraft");if(l&&confirm("درافتی پاشەکەوتکراو هەیە. بەکاری بهێنم؟"))D=Object.assign(D,JSON.parse(l))}catch(e){}
+    $("iCh").value=D.channel||"";$("iHl").value=D.headline||"";
+  }
+  render();
+})();
+</script>
+</body>
+</html>
