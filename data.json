@@ -1,6 +1,11 @@
 {
-  "channel": "کەناڵی وەرزشی",
-  "headline": "",
-  "live": [],
+  "channel": "کەناڵی وەرزشییەک هەواڵی وەرزشی",
+  "headline": "میسی باڵۆندۆری بردەوە",
+  "live": [
+    {
+      "title": "بەرشلۆەن ڕیال مەدرید",
+      "url": "https://hesgoalx.com/bbc-three/"
+    }
+  ],
   "goals": []
 }
